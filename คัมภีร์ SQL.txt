@@ -1,0 +1,317 @@
+1 หาพนักงานที่มีเงินเดือนมากกว่า 70000
+
+SELECT employees.emp_fname, employees.emp_lname, salaries.sal_salary
+FROM employees
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_salary > 70000 AND salaries.sal_to_date > CURRENT_DATE
+
+
+2 ค้นหารายละเอียดพนักงานที่ทำงานในแผนก "HR" และมีเงินเดือนมากกว่า 50,000
+
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, salaries.sal_salary FROM employees
+JOIN department_employee ON employees.emp_id = department_employee.deem_employee_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE departments.dept_name = 'Human Resources' AND salaries.sal_salary  > 60000 AND salaries.sal_to_date > CURRENT_DATE 
+
+3.ค้นหาพนักงานที่ทำงานในแผนก "Dev" และมีบทบาทเป็น "Manager"
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, roles.ro_name FROM employees
+JOIN department_employee ON employees.emp_id = department_employee.deem_employee_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN roles ON department_employee.deem_role_id = roles.ro_id
+WHERE departments.dept_name = 'Human Resources' AND roles.ro_name = 'Manager';
+
+
+4. ค้นหาพนักงานที่ได้รับเงินเดือนล่าสุดน้อยที่สุด
+SELECT employees.emp_fname, employees.emp_lname, salaries.sal_salary FROM employees
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE ORDER BY salaries.sal_salary ASC LIMIT 10
+
+5.ค้นหาพนักงานที่ได้รับเงินเดือนสูงสุดในแต่ละแผนก
+SELECT departments.dept_name, employees.emp_fname, employees.emp_lname, MAX(salaries.sal_salary) AS max_salary
+FROM departments JOIN department_employee ON departments.dept_id = department_employee.deem_department_id JOIN employees ON department_employee.deem_employee_id = employees.emp_id JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE GROUP BY departments.dept_id
+ORDER BY max_salary ASC
+
+6.หาจำนวนพนักงานในแต่ละแผนก
+SELECT departments.dept_name, COUNT(employees.emp_id) AS employees_count FROM departments
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id
+GROUP BY departments.dept_id
+ORDER BY employees_count ASC
+
+7. หาผลรวมเงินเดือนปัจจุบันของแต่ละแผนก
+SELECT departments.dept_name, SUM(salaries.sal_salary)  AS total_salary FROM departments
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE
+GROUP BY departments.dept_id
+ORDER BY total_salary ASC
+
+8. manager ผู้ชาย แต่ละแผนกที่มีเงินเดือนสูงสุด 
+SELECT departments.dept_name, employees.emp_fname,employees.emp_lname, employees.emp_gender, titles.tit_name, MAX(salaries.sal_salary) AS max_salary
+FROM departments 
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id 
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id 
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+JOIN emp_title ON employees.emp_id = emp_title.emti_employee_id
+JOIN titles ON emp_title.emti_title_id = titles.tit_id
+WHERE salaries.sal_to_date > CURRENT_DATE AND employees.emp_gender = 'M' AND tit_name = 'MANAGER'
+GROUP BY departments.dept_id 
+ORDER BY max_salary ASC
+
+
+9. แสดงพนักงานและแผนกที่เข้ามาใน 30 ปี และมีเงินเดือนสูงสุด 10 คน
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, titles.tit_name, salaries.sal_salary, emp_title.emti_from_date
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN salaries ON salaries.sal_employee_id = employees.emp_id
+JOIN emp_title ON emp_title.emti_employee_id = employees.emp_id
+JOIN titles ON titles.tit_id = emp_title.emti_title_id
+WHERE YEAR(emp_title.emti_from_date) BETWEEN YEAR(CURRENT_DATE()) - 30 AND YEAR(CURRENT_DATE()) 
+ORDER BY salaries.sal_salary DESC
+LIMIT 10
+
+10. เพิ่มพนักงาน Joe Dohn ตำแหน่ง Manager แผนก Development และมีเงินเดือนเริ่มต้น 100,000
+INSERT INTO employees ( emp_fname, emp_lname, emp_gender, emp_hire_date)
+VALUES ( 'Joe', 'Dohn', 'M', CURRENT_DATE);
+
+INSERT INTO department_employee (deem_employee_id,deem_department_id , deem_from_date, deem_to_date, deem_role_id)
+VALUES ((SELECT emp_id FROM employees WHERE emp_fname = 'Joe' ),
+(SELECT dept_id FROM departments WHERE dept_name = 'Development'),CURRENT_DATE, '9999-01-01',
+(SELECT ro_id FROM roles WHERE ro_name = 'Manager'));
+
+INSERT INTO salaries (sal_employee_id, sal_salary, sal_from_date, sal_to_date)
+VALUES(
+(SELECT emp_id FROM employees WHERE emp_fname = 'Joe'),100000,CURRENT_DATE,'9999-01-01');
+
+INSERT INTO emp_title (emti_employee_id, emti_from_date,emti_to_date,emti_title_id)
+VALUES(
+    (SELECT emp_id FROM employees WHERE emp_fname = 'Joe'),
+	CURRENT_DATE,
+    '9999-01-01',
+    (SELECT tit_id FROM titles WHERE tit_name = 'Manager')
+
+);
+
+11. หาพนักงานที่มีชื่อหน้า เริ่มต้นด้วยตัว J และอยู่แผนก Development
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+WHERE employees.emp_fname LIKE 'j%' AND departments.dept_name = 'Development'
+
+12.  หาพนักงานที่มีนามสกุล ลงท้ายด้วยตัว E และมีเข้ามาอยู่ในแผนก ปี 1990 - 2000 
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, emp_title.emti_from_date
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN emp_title ON emp_title.emti_employee_id = employees.emp_id
+WHERE employees.emp_fname LIKE '%e' AND YEAR(emp_title.emti_from_date) BETWEEN 1990 AND 2000
+
+ ---------------------------------------------------
+หาว่าในแต่ละภาคมีกี่จังหวัด
+SELECT region.rg_name, COUNT(provinces.pv_id) AS provinces_count FROM region
+JOIN provinces ON provinces.pv_rg_id = region.rg_id
+GROUP BY region.rg_name
+ORDER BY provinces_count DESC
+
+หาว่าในแต่ละจังหวัดมีกี่อำเภอ
+SELECT provinces.pv_name_th, provinces.pv_name_en, COUNT(districts.dt_id) AS districts_count FROM provinces
+JOIN districts ON districts.dt_pv_id = provinces.pv_id
+GROUP BY provinces.pv_name_th
+ORDER BY districts_count DESC
+
+หาที่อยู่เชื่อมข้อมูลข้าม DB
+SELECT 
+    user_addresses.usa_building_name,
+    user_addresses.usa_building_number,
+    user_addresses.usa_soi,
+    user_addresses.usa_road,
+    sub_districts.sdt_name_en,
+    districts.dt_name_en,
+    provinces.pv_name_en,
+    sub_districts.sdt_zip_code
+FROM 
+    regis_db.user_addresses
+JOIN 
+    thailand_db.sub_districts ON user_addresses.usa_sdt_id = sub_districts.sdt_id
+JOIN 
+    thailand_db.districts ON sub_districts.sdt_dt_id = districts.dt_id
+JOIN 
+    thailand_db.provinces ON districts.dt_pv_id = provinces.pv_id;
+หาว่าวันในวันจันทร์มีห้องไหนที่ไม่ว่าง
+SELECT 
+    rooms.rm_name, 
+    courses_timetable.ct_time_start,
+    courses_timetable.ct_time_end
+FROM 
+    regis_db.courses_timetable
+JOIN 
+    regis_db.rooms ON courses_timetable.ct_rm_id = rooms.rm_id
+WHERE 
+    courses_timetable.ct_day = 1; 
+
+หาว่าห้องไหนว่างวันไหนบ้าง
+-- ดึงห้องเรียนทั้งหมด
+SELECT 
+    rooms.rm_name AS Room_Name, 
+    days.day_name AS Day_Name
+FROM 
+    regis_db.rooms
+
+-- ใช้ CROSS JOIN เพื่อดึงวันทั้งหมด
+CROSS JOIN 
+    (SELECT 1 AS day_num, 'Monday' AS day_name UNION
+     SELECT 2, 'Tuesday' UNION
+     SELECT 3, 'Wednesday' UNION
+     SELECT 4, 'Thursday' UNION
+     SELECT 5, 'Friday' UNION
+     SELECT 6, 'Saturday' UNION
+     SELECT 7, 'Sunday') AS days
+
+-- ใช้ LEFT JOIN กับ courses_timetable เพื่อตรวจสอบว่าห้องเรียนมีการใช้งานหรือไม่
+LEFT JOIN 
+    regis_db.courses_timetable ON rooms.rm_id = courses_timetable.ct_rm_id 
+    AND days.day_num = courses_timetable.ct_day
+
+-- กรองห้องเรียนที่ไม่มีการใช้งานในวันนั้น ๆ (ไม่มีในตารางเรียน)
+WHERE 
+    courses_timetable.ct_rm_id IS NULL;
+
+
+เพื่อให้คุณเข้าใจการใช้ JOIN แต่ละประเภท ผมจะสร้างตัวอย่างข้อมูลสมมติสำหรับสองตาราง คือ students และ courses_enrolled พร้อมทั้งผลลัพธ์จากแต่ละประเภทของ JOIN เพื่อแสดงให้เห็นความแตกต่างระหว่างพวกมัน
+
+โครงสร้างข้อมูลตัวอย่าง
+ตาราง students
+student_id	name
+1	Somchai
+2	Suda
+3	Prasit
+4	Malee
+ตาราง courses_enrolled
+course_id	student_id	course_name
+101	1	Mathematics
+102	1	English
+103	2	Science
+104	3	History
+1. INNER JOIN
+คำสั่ง SQL:
+
+sql
+คัดลอกโค้ด
+SELECT students.name, courses_enrolled.course_name
+FROM students
+INNER JOIN courses_enrolled ON students.student_id = courses_enrolled.student_id;
+ผลลัพธ์:
+
+name	course_name
+Somchai	Mathematics
+Somchai	English
+Suda	Science
+Prasit	History
+คำอธิบาย:
+
+INNER JOIN ดึงเฉพาะข้อมูลที่ตรงกันในตาราง students และ courses_enrolled.
+จะแสดงเฉพาะนักเรียนที่มีข้อมูลในทั้งสองตาราง (เช่น มีการลงทะเบียนในวิชา).
+2. LEFT JOIN
+คำสั่ง SQL:
+
+sql
+คัดลอกโค้ด
+SELECT students.name, courses_enrolled.course_name
+FROM students
+LEFT JOIN courses_enrolled ON students.student_id = courses_enrolled.student_id;
+ผลลัพธ์:
+
+name	course_name
+Somchai	Mathematics
+Somchai	English
+Suda	Science
+Prasit	History
+Malee	NULL
+คำอธิบาย:
+
+LEFT JOIN ดึงข้อมูลทั้งหมดจากตาราง students และข้อมูลจากตาราง courses_enrolled ที่ตรงกันเท่านั้น.
+นักเรียนที่ไม่มีการลงทะเบียนในวิชา (เช่น Malee) จะถูกแสดงด้วยค่า NULL ในคอลัมน์ course_name.
+3. RIGHT JOIN
+คำสั่ง SQL:
+
+sql
+คัดลอกโค้ด
+SELECT students.name, courses_enrolled.course_name
+FROM students
+RIGHT JOIN courses_enrolled ON students.student_id = courses_enrolled.student_id;
+ผลลัพธ์:
+
+name	course_name
+Somchai	Mathematics
+Somchai	English
+Suda	Science
+Prasit	History
+คำอธิบาย:
+
+RIGHT JOIN ดึงข้อมูลทั้งหมดจากตาราง courses_enrolled และข้อมูลจากตาราง students ที่ตรงกัน.
+ในกรณีนี้ ไม่มีคอร์สที่ไม่มีนักเรียนลงทะเบียน ดังนั้นจึงไม่เห็นค่า NULL.
+4. FULL JOIN
+คำสั่ง SQL:
+
+sql
+คัดลอกโค้ด
+SELECT students.name, courses_enrolled.course_name
+FROM students
+FULL JOIN courses_enrolled ON students.student_id = courses_enrolled.student_id;
+ผลลัพธ์:
+
+name	course_name
+Somchai	Mathematics
+Somchai	English
+Suda	Science
+Prasit	History
+Malee	NULL
+คำอธิบาย:
+
+FULL JOIN ดึงข้อมูลทั้งหมดจากทั้งสองตาราง ไม่ว่าจะมีการจับคู่กันหรือไม่.
+ในกรณีนี้ Malee จะถูกแสดงด้วยค่า NULL ใน course_name เนื่องจากเธอไม่ได้ลงทะเบียนเรียนในวิชาใด ๆ.
+ถ้ามีวิชาใน courses_enrolled ที่ไม่มีนักเรียนลงทะเบียน ก็จะแสดงค่า NULL ใน name เช่นกัน.
+5. CROSS JOIN
+คำสั่ง SQL:
+
+sql
+คัดลอกโค้ด
+SELECT students.name, courses_enrolled.course_name
+FROM students
+CROSS JOIN courses_enrolled;
+ผลลัพธ์:
+
+name	course_name
+Somchai	Mathematics
+Somchai	English
+Somchai	Science
+Somchai	History
+Suda	Mathematics
+Suda	English
+Suda	Science
+Suda	History
+Prasit	Mathematics
+Prasit	English
+Prasit	Science
+Prasit	History
+Malee	Mathematics
+Malee	English
+Malee	Science
+Malee	History
+คำอธิบาย:
+
+CROSS JOIN ทำการจับคู่ทุกแถวจากตาราง students กับทุกแถวจากตาราง courses_enrolled โดยไม่สนใจเงื่อนไขการเชื่อมโยง.
+ผลลัพธ์จะเป็นการจับคู่ทุกนักเรียนกับทุกวิชา ทำให้จำนวนแถวเพิ่มขึ้นมาก.
+สรุป:
+INNER JOIN: แสดงเฉพาะข้อมูลที่มีการจับคู่ระหว่างทั้งสองตาราง.
+LEFT JOIN: แสดงข้อมูลทั้งหมดจากตารางซ้าย (ตารางแรก) แม้ว่าจะไม่มีข้อมูลในตารางขวา (ตารางที่สอง).
+RIGHT JOIN: แสดงข้อมูลทั้งหมดจากตารางขวา แม้ว่าจะไม่มีข้อมูลในตารางซ้าย.
+FULL JOIN: แสดงข้อมูลทั้งหมดจากทั้งสองตาราง ไม่ว่ามีการจับคู่หรือไม่.
+CROSS JOIN: แสดงผลการจับคู่ทุกแถวในตารางแรกกับทุกแถวในตารางที่สอง.
+คุณสามารถเลือกใช้ JOIN ประเภทต่าง ๆ ได้ตามความต้องการในการรวมข้อมูลจากหลายตาราง.
+

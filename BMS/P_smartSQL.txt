@@ -1,0 +1,192 @@
+โจทย์ข้อที่ 1: เพิ่มข้อมูลใน student_insert_test
+INSERT INTO student_insert_test (tin_id, tin_fname, tin_lname, tin_team, tin_created_at)
+VALUES (2, 'FirstName', 'LastName', 'TeamName', NOW());
+
+โจทย์ข้อที่ 2: อัปเดตข้อมูลของตนเองใน student_update_test
+UPDATE student_update_test
+SET tup_fname = 'yamroll',
+    tup_lname = 'therabbit',
+    tup_updated_at = NOW()
+WHERE tup_id = 1;
+
+โจทย์ข้อที่ 3: รวมชื่อและนามสกุลเป็น Name
+SELECT concat(student_update_test.tup_fname ,' ', student_update_test.tup_lname) as name
+from student_update_test
+
+โจทย์ข้อที่ 4: จำนวนอำเภอและตำบลในแต่ละจังหวัด
+คำอธิบาย: หาจำนวนอำเภอและตำบลในแต่ละจังหวัด โดยแสดงชื่อจังหวัด จำนวนอำเภอ และจำนวนตำบล
+SELECT 
+    mock_thailand_db.provinces.pv_name_th AS "Provinces",
+    COUNT(DISTINCT mock_thailand_db.districts.dt_name_th) AS "District",
+    COUNT(DISTINCT mock_thailand_db.sub_districts.sdt_name_th) AS "Sub_District"
+FROM 
+    mock_thailand_db.provinces
+JOIN 
+    mock_thailand_db.districts ON mock_thailand_db.districts.dt_pv_id = mock_thailand_db.provinces.pv_id
+JOIN 
+    mock_thailand_db.sub_districts ON mock_thailand_db.sub_districts.sdt_dt_id = mock_thailand_db.districts.dt_id
+GROUP BY 
+    mock_thailand_db.provinces.pv_name_th
+ORDER BY 
+    mock_thailand_db.provinces.pv_name_th;
+โจทย์ข้อที่ 5: การ join ข้าม database เพื่อตรวจสอบที่อยู่ของนิสิต
+คำอธิบาย: เชื่อมต่อระหว่างฐานข้อมูลเพื่อตรวจสอบที่อยู่ของนิสิตโดย แสดงชื่อ-สกุล บ้านเลขที่ ตึก หมู่ ซอย ถนน ตำบล อำเภอ จังหวัด และรหัสไปรษณีของนิสิตที่อาศัยอยู่ภาคตะวันออก (Eastern)
+select concat(mock_reg_db.user_students.usst_fname,' ',mock_reg_db.user_students.usst_lname) as full_name,
+user_addresses.*,
+mock_thailand_db.sub_districts.*,
+mock_thailand_db.districts.*,
+mock_thailand_db.provinces.*,
+mock_thailand_db.region.*
+from user_students
+join user_addresses on usst_usa_id = usa_id
+join mock_thailand_db.sub_districts  on usa_sdt_id = sdt_id
+join mock_thailand_db.districts on dt_id = sdt_dt_id
+join mock_thailand_db.provinces on dt_pv_id = pv_id
+join mock_thailand_db.region on pv_rg_id = rg_id
+
+where rg_name = 'Eastern'
+
+
+โจทย์ข้อที่ 6: ตรวจสอบห้องที่มีการเรียนการสอนในวันจันทร์สำหรับหลักสูตรที่กำหนด
+คำอธิบาย: แสดงชื่อวิชา ชื่อห้องเรียน และเวลาเรียนของรายวิชา CS101, CS102, CS201, CS202 ที่เรียนในวันจันทร์
+select cs_code,cs_name,ct_day,ct_time_start,ct_time_end,rm_name
+from courses
+join courses_offered on co_cs_id = cs_id
+join courses_timetable on ct_co_id = co_id
+join rooms on ct_rm_id = rm_id
+
+WHERE
+    mock_reg_db.courses.cs_code IN ('CS101' , 'CS101', 'CS201', 'CS202')and ct_day='Monday'
+
+โจทย์ข้อที่ 7: หลักสูตรที่เปิดใน 2024 และสอนในวันจันทร์
+SELECT 
+	mock_reg_db.curriculums.cl_name,
+	mock_reg_db.courses.cs_code,
+	mock_reg_db.courses.cs_name
+FROM
+    mock_reg_db.curriculums
+JOIN 
+	mock_reg_db.courses on  mock_reg_db.curriculums.cl_id = mock_reg_db.courses.cs_cl_id
+JOIN
+	 mock_reg_db.courses_offered on mock_reg_db.courses.cs_id = mock_reg_db.courses_offered.co_cs_id
+JOIN
+	mock_reg_db.courses_timetable on mock_reg_db.courses_offered.co_id = mock_reg_db.courses_timetable.ct_co_id
+Where  
+	 mock_reg_db.courses_offered.co_term like 1 
+AND  
+     mock_reg_db.courses_offered.co_year like 2024
+AND
+	 mock_reg_db.courses_timetable.ct_day like "Monday"
+
+โจทย์ข้อที่ 8: แสดงรายชื่อนิสิตที่มีอาจารย์ที่ปรึกษา
+SELECT 
+	mock_reg_db.user_students.usst_id,
+    CONCAT(mock_reg_db.user_students.usst_fname, " ",
+    mock_reg_db.user_students.usst_lname) as full_name,
+    count(mock_reg_db.student_advisors.sta_ussf_id) as Advisor_count
+FROM
+    mock_reg_db.user_students
+JOIN 
+	mock_reg_db.student_advisors on mock_reg_db.user_students.usst_id = mock_reg_db.student_advisors.sta_usst_id
+GROUP BY 
+	mock_reg_db.user_students.usst_id
+
+โจทย์ข้อที่ 9: หานิสิตที่ไม่มีอาจารย์ที่ปรึกษาดูแล
+SELECT 
+    mock_reg_db.user_students.usst_id,
+    CONCAT(mock_reg_db.user_students.usst_fname, ' ', mock_reg_db.user_students.usst_lname) AS full_name
+FROM 
+    mock_reg_db.user_students
+LEFT JOIN 
+    mock_reg_db.student_advisors ON mock_reg_db.user_students.usst_id = mock_reg_db.student_advisors.sta_usst_id
+WHERE 
+    mock_reg_db.student_advisors.sta_usst_id IS NULL;
+
+โจทย์ข้อที่ 10: ค้นหาจำนวนนิสิตแยกตามหลักสูตร
+SELECT 
+    mock_reg_db.curriculums.cl_name,
+    count(mock_reg_db.courses_enrolled.ce_id)
+FROM 
+    mock_reg_db.curriculums
+JOIN
+	mock_reg_db.courses on mock_reg_db.curriculums.cl_id = mock_reg_db.courses.cs_cl_id
+JOIN 
+	mock_reg_db.courses_enrolled on mock_reg_db.courses.cs_id = mock_reg_db.courses_enrolled.ce_co_id
+GROUP BY
+	mock_reg_db.curriculums.cl_id
+
+โจทย์ข้อที่ 11: ค้นหารายวิชาที่มีนิสิตลงทะเบียนมากกว่า 5 คน
+SELECT 
+    mock_reg_db.courses.cs_code,
+    mock_reg_db.courses.cs_name,
+    count(mock_reg_db.courses_enrolled.ce_id) as total_students
+FROM 
+    mock_reg_db.courses
+JOIN
+	mock_reg_db.courses_enrolled on mock_reg_db.courses.cs_id = mock_reg_db.courses_enrolled.ce_co_id
+GROUP BY
+	mock_reg_db.courses.cs_id
+HAVING
+	total_students > 5
+
+โจทย์ข้อที่ 12: แสดงรายวิชาที่ไม่ได้เปิดในเทอมนี้แต่เปิดในปีที่แล้ว
+SELECT 
+    mock_reg_db.courses.cs_code,
+    mock_reg_db.courses.cs_name
+FROM 
+    mock_reg_db.courses
+JOIN
+    mock_reg_db.courses_offered ON mock_reg_db.courses.cs_id = mock_reg_db.courses_offered.co_cs_id
+WHERE
+    mock_reg_db.courses_offered.co_year = YEAR(CURRENT_DATE) - 1
+GROUP BY
+    mock_reg_db.courses.cs_id
+
+โจทย์ข้อที่ 13: แปลงเกรดจากตัวอักษรเป็นตัวเลข
+SELECT 
+    CONCAT(mock_reg_db.user_students.usst_fname, ' ', mock_reg_db.user_students.usst_lname) AS full_name,
+    CASE 
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'A' THEN 4
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'B+' THEN 3.5
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'B' THEN 3
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'C+' THEN 2.5
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'C' THEN 2
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'D+' THEN 1.5
+        WHEN mock_reg_db.courses_enrolled.ce_grade = 'D' THEN 1
+        ELSE 0
+    END AS grade_point 
+FROM 
+    mock_reg_db.user_students
+JOIN 
+    mock_reg_db.courses_enrolled ON mock_reg_db.user_students.usst_id = mock_reg_db.courses_enrolled.ce_usst_id
+JOIN
+    mock_reg_db.courses_offered ON mock_reg_db.courses_enrolled.ce_co_id = mock_reg_db.courses_offered.co_id
+JOIN
+    mock_reg_db.courses ON mock_reg_db.courses_offered.co_cs_id = mock_reg_db.courses.cs_id
+WHERE 
+    mock_reg_db.courses.cs_code like 'CS101'
+
+โจทย์ข้อที่ 14: แสดงรายชื่อนิสิตที่มีคะแนนเฉลี่ยมากกว่า 3.5
+SELECT 
+    CONCAT(mock_reg_db.user_students.usst_fname, ' ', mock_reg_db.user_students.usst_lname) AS full_name,
+    AVG(
+        CASE 
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'A' THEN 4
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'B+' THEN 3.5
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'B' THEN 3
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'C+' THEN 2.5
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'C' THEN 2
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'D+' THEN 1.5
+            WHEN mock_reg_db.courses_enrolled.ce_grade = 'D' THEN 1
+            ELSE 0
+        END
+    ) AS average_grade
+FROM 
+    mock_reg_db.user_students
+JOIN 
+    mock_reg_db.courses_enrolled ON mock_reg_db.user_students.usst_id = mock_reg_db.courses_enrolled.ce_usst_id
+GROUP BY 
+    mock_reg_db.user_students.usst_id
+HAVING 
+    average_grade > 3.5;
+

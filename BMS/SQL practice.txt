@@ -1,0 +1,112 @@
+1 หาพนักงานที่มีเงินเดือนมากกว่า 70000
+
+SELECT employees.emp_fname, employees.emp_lname, salaries.sal_salary
+FROM employees
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_salary > 70000 AND salaries.sal_to_date > CURRENT_DATE
+
+
+2 ค้นหารายละเอียดพนักงานที่ทำงานในแผนก "HR" และมีเงินเดือนมากกว่า 50,000
+
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, salaries.sal_salary FROM employees
+JOIN department_employee ON employees.emp_id = department_employee.deem_employee_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE departments.dept_name = 'Human Resources' AND salaries.sal_salary  > 60000 AND salaries.sal_to_date > CURRENT_DATE 
+
+3.ค้นหาพนักงานที่ทำงานในแผนก "Dev" และมีบทบาทเป็น "Manager"
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, roles.ro_name FROM employees
+JOIN department_employee ON employees.emp_id = department_employee.deem_employee_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN roles ON department_employee.deem_role_id = roles.ro_id
+WHERE departments.dept_name = 'Human Resources' AND roles.ro_name = 'Manager';
+
+
+4. ค้นหาพนักงานที่ได้รับเงินเดือนล่าสุดน้อยที่สุด
+SELECT employees.emp_fname, employees.emp_lname, salaries.sal_salary FROM employees
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE ORDER BY salaries.sal_salary ASC LIMIT 10
+
+5.ค้นหาพนักงานที่ได้รับเงินเดือนสูงสุดในแต่ละแผนก
+SELECT departments.dept_name, employees.emp_fname, employees.emp_lname, MAX(salaries.sal_salary) AS max_salary
+FROM departments JOIN department_employee ON departments.dept_id = department_employee.deem_department_id JOIN employees ON department_employee.deem_employee_id = employees.emp_id JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE GROUP BY departments.dept_id
+ORDER BY max_salary ASC
+
+6.หาจำนวนพนักงานในแต่ละแผนก
+SELECT departments.dept_name, COUNT(employees.emp_id) AS employees_count FROM departments
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id
+GROUP BY departments.dept_id
+ORDER BY employees_count ASC
+
+7. หาผลรวมเงินเดือนปัจจุบันของแต่ละแผนก
+SELECT departments.dept_name, SUM(salaries.sal_salary)  AS total_salary FROM departments
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+WHERE salaries.sal_to_date > CURRENT_DATE
+GROUP BY departments.dept_id
+ORDER BY total_salary ASC
+
+8. manager ผู้ชาย แต่ละแผนกที่มีเงินเดือนสูงสุด 
+SELECT departments.dept_name, employees.emp_fname,employees.emp_lname, employees.emp_gender, titles.tit_name, MAX(salaries.sal_salary) AS max_salary
+FROM departments 
+JOIN department_employee ON departments.dept_id = department_employee.deem_department_id 
+JOIN employees ON department_employee.deem_employee_id = employees.emp_id 
+JOIN salaries ON employees.emp_id = salaries.sal_employee_id
+JOIN emp_title ON employees.emp_id = emp_title.emti_employee_id
+JOIN titles ON emp_title.emti_title_id = titles.tit_id
+WHERE salaries.sal_to_date > CURRENT_DATE AND employees.emp_gender = 'M' AND tit_name = 'MANAGER'
+GROUP BY departments.dept_id 
+ORDER BY max_salary ASC
+
+
+9. แสดงพนักงานและแผนกที่เข้ามาใน 30 ปี และมีเงินเดือนสูงสุด 10 คน
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, titles.tit_name, salaries.sal_salary, emp_title.emti_from_date
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN salaries ON salaries.sal_employee_id = employees.emp_id
+JOIN emp_title ON emp_title.emti_employee_id = employees.emp_id
+JOIN titles ON titles.tit_id = emp_title.emti_title_id
+WHERE YEAR(emp_title.emti_from_date) BETWEEN YEAR(CURRENT_DATE()) - 30 AND YEAR(CURRENT_DATE()) 
+ORDER BY salaries.sal_salary DESC
+LIMIT 10
+
+10. เพิ่มพนักงาน Joe Dohn ตำแหน่ง Manager แผนก Development และมีเงินเดือนเริ่มต้น 100,000
+INSERT INTO employees ( emp_fname, emp_lname, emp_gender, emp_hire_date)
+VALUES ( 'Joe', 'Dohn', 'M', CURRENT_DATE);
+
+INSERT INTO department_employee (deem_employee_id,deem_department_id , deem_from_date, deem_to_date, deem_role_id)
+VALUES ((SELECT emp_id FROM employees WHERE emp_fname = 'Joe' ),
+(SELECT dept_id FROM departments WHERE dept_name = 'Development'),CURRENT_DATE, '9999-01-01',
+(SELECT ro_id FROM roles WHERE ro_name = 'Manager'));
+
+INSERT INTO salaries (sal_employee_id, sal_salary, sal_from_date, sal_to_date)
+VALUES(
+(SELECT emp_id FROM employees WHERE emp_fname = 'Joe'),100000,CURRENT_DATE,'9999-01-01');
+
+INSERT INTO emp_title (emti_employee_id, emti_from_date,emti_to_date,emti_title_id)
+VALUES(
+    (SELECT emp_id FROM employees WHERE emp_fname = 'Joe'),
+	CURRENT_DATE,
+    '9999-01-01',
+    (SELECT tit_id FROM titles WHERE tit_name = 'Manager')
+
+);
+
+11. หาพนักงานที่มีชื่อหน้า เริ่มต้นด้วยตัว J และอยู่แผนก Development
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+WHERE employees.emp_fname LIKE 'j%' AND departments.dept_name = 'Development'
+
+12.  หาพนักงานที่มีนามสกุล ลงท้ายด้วยตัว E และมีเข้ามาอยู่ในแผนก ปี 1990 - 2000 
+SELECT employees.emp_fname, employees.emp_lname, departments.dept_name, emp_title.emti_from_date
+FROM employees
+JOIN department_employee ON department_employee.deem_employee_id = employees.emp_id
+JOIN departments ON departments.dept_id = department_employee.deem_department_id
+JOIN emp_title ON emp_title.emti_employee_id = employees.emp_id
+WHERE employees.emp_fname LIKE '%e' AND YEAR(emp_title.emti_from_date) BETWEEN 1990 AND 2000
